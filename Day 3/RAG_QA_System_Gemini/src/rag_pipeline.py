@@ -1,7 +1,6 @@
 from langchain.chains import RetrievalQA
 from langchain_google_genai import GoogleGenerativeAI
 from .retriever import load_vectorstore
-
 import os
 from dotenv import load_dotenv
 load_dotenv()
