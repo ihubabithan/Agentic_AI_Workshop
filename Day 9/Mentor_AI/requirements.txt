@@ -1,0 +1,9 @@
+streamlit
+langchain
+langchain-google-genai
+google-generativeai
+faiss-cpu
+chromadb
+python-dotenv
+pydantic
+typing-extensions
