@@ -1,68 +1,94 @@
-# agents/validation_agent.py
-
 import os
 import json
+import re
 from dotenv import load_dotenv
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
-import re
+from langchain.agents import Tool, initialize_agent
+from langchain.agents.agent_types import AgentType
 
 
 class ValidationAgent:
     def __init__(self):
         load_dotenv()
-        self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
+
+        self.llm = ChatGoogleGenerativeAI(
+            model="gemini-1.5-flash",
+            temperature=0.3
+        )
+
         embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
         self.vectorstore = FAISS.load_local(
-            "vectorstores/validation_faiss",  # Use your validation examples
+            "vectorstores/validation_faiss",
             embeddings=embeddings,
             allow_dangerous_deserialization=True
         )
 
-        self.qa_chain = RetrievalQA.from_chain_type(
+        retriever = self.vectorstore.as_retriever()
+
+        self.tools = [
+            Tool(
+                name="ValidationExampleRetriever",
+                func=lambda q: "\n\n".join([doc.page_content for doc in retriever.get_relevant_documents(q)]),
+                description="Helpful for reviewing how OKR validations are judged based on examples."
+            )
+        ]
+
+        self.agent_executor = initialize_agent(
+            tools=self.tools,
             llm=self.llm,
-            retriever=self.vectorstore.as_retriever(),
-            chain_type="stuff"
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True,
+            handle_parsing_errors=True  # ✅ enables retry or graceful fallback
         )
-
-        self.prompt_template = PromptTemplate.from_template("""
-You are a validation agent. Your job is to compare the student's OKR, benchmark data, and gathered evidence and return a structured JSON response assessing:
-
-- Relevance (0-50): Does evidence match the OKR?
-- Completeness (0-30): Are all key results achieved?
-- Quality (0-20): Does the evidence indicate depth (optional)?
-- Final status: "pass" if total >= 70, else "fail"
-
-Use your judgment based on retrieved examples.
-
-Student OKR:
-{okr}
-
-Benchmark Expectations:
-{benchmark}
-
-Evidence Summary:
-{evidence}
-
-Return only JSON with the keys: relevance, completeness, quality, totalScore, status.
-""")
 
     def validate(self, okr: dict, benchmark: dict, evidence: dict) -> dict:
-        prompt = self.prompt_template.format(
-            okr=json.dumps(okr, indent=2),
-            benchmark=json.dumps(benchmark, indent=2),
-            evidence=json.dumps(evidence, indent=2)
-        )
-
-        response = self.qa_chain.run(prompt)
-
-        # Clean code block if returned
-        cleaned_response = re.sub(r"```(?:json)?\n(.*?)```", r"\1", response, flags=re.DOTALL).strip()
-
         try:
-            return json.loads(cleaned_response)
-        except Exception:
-            return {"error": "Failed to parse validation output", "raw_output": response}
+            prompt = f"""
+You are a validation agent.
+
+Compare the student's OKR, benchmark data, and collected evidence using relevant examples from the ValidationExampleRetriever tool.
+
+Score the OKR with:
+- relevance (0–50): Does evidence match the OKR goals?
+- completeness (0–30): Are all key results met?
+- quality (0–20): Depth and clarity of outcomes (optional)
+- totalScore: Sum of above
+- status: "pass" if totalScore >= 70, otherwise "fail"
+
+📥 Inputs:
+OKR:
+{json.dumps(okr, indent=2)}
+
+Benchmark:
+{json.dumps(benchmark, indent=2)}
+
+Evidence:
+{json.dumps(evidence, indent=2)}
+
+📤 Respond ONLY in JSON format like:
+{{
+  "relevance": 8,
+  "completeness": 5,
+  "quality": 4,
+  "totalScore": 10,
+  "status": "pass"
+}}
+"""
+
+            result = self.agent_executor.invoke({"input": prompt})
+            output = result.get("output", "").strip()
+
+            # ✅ Remove markdown code block if returned
+            if output.startswith("```json") or output.startswith("```"):
+                output = re.sub(r"```(?:json)?\s*(.*?)\s*```", r"\1", output, flags=re.DOTALL).strip()
+
+            return json.loads(output)
+
+        except Exception as e:
+            return {
+                "error": "Failed to parse validation output",
+                "raw_output": result.get("output", "") if 'result' in locals() else '',
+                "exception": str(e)
+            }

@@ -5,30 +5,7 @@ Abithan
 
 ## Project Flow
 
-### Top-Level Flow:
-- Frontend (User submits OKR as JSON)
-  ↓
-- Backend (Triggers AI and sends data to agents)
-
-### Agent Workflow:
-1. OKR Cleaner Agent: Cleans and simplifies JSON text  
-   ↓  
-2. OKR Interpreter Agent: Converts to structured OKR data  
-   ↓  
-3. Benchmark Retriever Agent: Fetches industry standards  
-   ↓  
-4. Evidence Monitor Agent: Collects and verifies user activity  
-   ↓  
-5. Validation Agent: Validates effort based on relevance, completeness, and quality  
-   ↓  
-6. Feedback Generator Agent: Generates feedback and action plan  
-   ↓  
-7. Progress Tracker Agent: Tracks progress over time  
-   ↓  
-- Save to Database
-
-### Bottom Layer:
-- UI: Display progress, feedback, action plan
+![Project Diagram](architecture.png)
 
 ---
 

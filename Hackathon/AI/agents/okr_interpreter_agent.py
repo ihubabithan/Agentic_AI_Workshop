@@ -1,51 +1,77 @@
-from langchain_community.vectorstores import FAISS
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA
 import os
 import json
-from dotenv import load_dotenv
 import re
+from dotenv import load_dotenv
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain.agents import Tool, initialize_agent
+from langchain.agents.agent_types import AgentType
 
 class OKRInterpreterAgent:
     def __init__(self):
         load_dotenv()
 
         self.llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.3)
-        embedding = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+        embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
 
         self.vectorstore = FAISS.load_local(
             "vectorstores/okr_faiss",
-            embeddings=embedding,
+            embeddings=embeddings,
             allow_dangerous_deserialization=True
         )
 
-        self.qa_chain = RetrievalQA.from_chain_type(
+        retriever = self.vectorstore.as_retriever()
+
+        self.tools = [
+            Tool(
+                name="OKRExampleRetriever",
+                func=lambda q: "\n\n".join([doc.page_content for doc in retriever.get_relevant_documents(q)]),
+                description="Useful for retrieving OKR examples that match the current OKR sentence."
+            )
+        ]
+
+        self.agent_executor = initialize_agent(
+            tools=self.tools,
             llm=self.llm,
-            retriever=self.vectorstore.as_retriever(),
-            chain_type="stuff"
+            agent=AgentType.ZERO_SHOT_REACT_DESCRIPTION,
+            verbose=True
         )
 
-        self.prompt_template = PromptTemplate.from_template("""
-You are an OKR interpreter. Given the student’s cleaned OKR sentence and the retrieved examples below, extract:
+    def interpret(self, okr_text: str) -> dict:
+        try:
+            prompt = f"""
+You are an OKR interpreter.
+
+Given the following cleaned OKR sentence:
+"{okr_text}"
+
+Use the OKRExampleRetriever tool to find relevant OKRs for reference.
+
+Then extract and return:
 - objective
 - keyResults (as a list)
 - skillFocus (as a list)
-- ambiguityLevel (vague, moderate, clear)
+- ambiguityLevel (one of: vague, moderate, clear)
 
-Respond only in JSON format.
+Respond only in this JSON format:
+{{
+  "objective": "...",
+  "keyResults": ["...", "..."],
+  "skillFocus": ["...", "..."],
+  "ambiguityLevel": "..."
+}}
+"""
 
-OKR Sentence:
-"{okr_text}"
-""")
+            result = self.agent_executor.invoke({"input": prompt})
+            output = result.get("output", "").strip()
 
-    def interpret(self, okr_text: str) -> dict:
-        prompt = self.prompt_template.format(okr_text=okr_text)
-        response = self.qa_chain.run(prompt)
+            # Clean if inside code fences
+            cleaned = re.sub(r"```(?:json)?\s*([\s\S]*?)\s*```", r"\1", output).strip()
+            return json.loads(cleaned)
 
-        try:
-        # Remove triple backtick blocks like ```json ... ```
-            cleaned_response = re.sub(r"```(?:json)?\s*([\s\S]*?)\s*```", r"\1", response).strip()
-            return json.loads(cleaned_response)
-        except Exception:
-            return {"error": "Failed to parse response", "raw_output": response}
+        except Exception as e:
+            return {
+                "error": "Failed to parse interpreted OKR response",
+                "raw_output": result.get("output", "") if 'result' in locals() else '',
+                "exception": str(e)
+            }

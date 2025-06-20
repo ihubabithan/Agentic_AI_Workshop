@@ -34,18 +34,19 @@ def generate_okr_text(request: OKRInput):
         sentence_agent = OKRSentenceAgent()
         okr_text = sentence_agent.generate_okr_text(request.dict())
 
-        # # Step 2: Interpret the structured data using RAG
+        # Step 2: Interpret the structured data using RAG
         interpreter_agent = OKRInterpreterAgent()
         structured_okr = interpreter_agent.interpret(okr_text)
 
-        # # Step 3: Retrieve benchmark data using another RAG agent
+        # Step 3: Retrieve benchmark data using another RAG agent
         benchmark_agent = BenchmarkRetrieverAgent()
         benchmark_data = benchmark_agent.retrieve_benchmarks(structured_okr)
 
-        # Step 4: Return the entire response
+        # Step 4: Collect evidence for the OKR
         evidence_agent = EvidenceMonitorAgent()
         evidence_data = evidence_agent.validate(request.dict())
 
+        # Step 5: Validate OKR against evidence and benchmark
         validation_agent = ValidationAgent()
         validation_output = validation_agent.validate(
             structured_okr,
@@ -53,6 +54,7 @@ def generate_okr_text(request: OKRInput):
             evidence_data
         )
 
+        # Step 6: Generate feedback based on validation
         feedback_agent = FeedbackGeneratorAgent()
         feedback_output = feedback_agent.generate_feedback(
             structured_okr,
@@ -60,6 +62,7 @@ def generate_okr_text(request: OKRInput):
             validation_output
         )
 
+        # Step 7: Generate progress report
         progress_agent = ProgressTrackerAgent()
         progress_output = progress_agent.track(
             validation=validation_output,
@@ -67,6 +70,7 @@ def generate_okr_text(request: OKRInput):
             evidence=evidence_data
         )
 
+        # ✅ Final Return
         return {
             "cleaned_okr_text": okr_text,
             "structured_okr": structured_okr,
@@ -74,7 +78,7 @@ def generate_okr_text(request: OKRInput):
             "evidence": evidence_data,
             "validation": validation_output,
             "feedback": feedback_output,
-            "progress": progress_output.dict()  # if Pydantic object
+            "progress": progress_output 
         }
 
     except Exception as e:

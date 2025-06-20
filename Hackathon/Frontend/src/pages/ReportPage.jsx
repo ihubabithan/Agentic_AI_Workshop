@@ -125,15 +125,7 @@ const OKRReportDashboard = () => {
           </div>
 
           {/* Status Banner */}
-          <div className={`px-8 py-4 ${getStatusColor(userData.progress.status)} border-l-4 border-orange-500`}>
-            <div className="flex items-center space-x-3">
-              <AlertTriangle size={24} />
-              <div>
-                <h3 className="font-semibold">Status: {userData.progress.status.replace('_', ' ').toUpperCase()}</h3>
-                <p className="text-sm opacity-80">{userData.progress.summary}</p>
-              </div>
-            </div>
-          </div>
+          
         </div>
 
         {/* Navigation Tabs */}
