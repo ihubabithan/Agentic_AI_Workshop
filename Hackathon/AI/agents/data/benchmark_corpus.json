@@ -1,0 +1,22 @@
+[
+  {
+    "role": "Backend Developer (Junior)",
+    "objective": "Improve backend development skills",
+    "keyResults": [
+      "Build 2–3 backend projects",
+      "Understand REST APIs",
+      "Learn Node.js and MongoDB basics"
+    ],
+    "skillFocus": ["Node.js", "MongoDB", "REST APIs"]
+  },
+  {
+    "role": "SDE 1 at Amazon",
+    "objective": "Master Data Structures & Algorithms",
+    "keyResults": [
+      "Solve 100 LeetCode problems",
+      "Understand time and space complexity",
+      "Participate in coding contests"
+    ],
+    "skillFocus": ["algorithms", "problem-solving", "DSA"]
+  }
+]

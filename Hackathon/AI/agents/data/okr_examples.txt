@@ -1,0 +1,15 @@
+Objective: Improve coding skills
+Key Results:
+- Solve 50 Leetcode problems
+- Review weekly progress
+
+Skill Focus: coding, algorithms
+Ambiguity Level: clear
+---
+Objective: Get better at backend
+Key Results:
+- Complete 3 Node.js projects
+- Learn MongoDB
+Skill Focus: Node.js, backend
+Ambiguity Level: moderate
+---

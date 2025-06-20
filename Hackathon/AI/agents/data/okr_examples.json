@@ -1,0 +1,14 @@
+[
+  {
+    "objective": "Improve coding skills",
+    "keyResults": ["Solve 50 Leetcode problems", "Review weekly progress"],
+    "skillFocus": ["coding", "algorithms"],
+    "ambiguityLevel": "clear"
+  },
+  {
+    "objective": "Get better at backend",
+    "keyResults": ["Complete 3 Node.js projects", "Learn MongoDB"],
+    "skillFocus": ["Node.js", "backend"],
+    "ambiguityLevel": "moderate"
+  }
+]

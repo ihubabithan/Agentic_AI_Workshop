@@ -1,0 +1,11 @@
+fastapi
+pydantic
+requests
+pytz
+dotenv
+langchain
+langchain-core
+langchain-community
+langchain-google-genai
+faiss-cpu
+uvicorn
