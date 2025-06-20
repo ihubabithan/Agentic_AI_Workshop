@@ -5,7 +5,7 @@ Abithan
 
 ## Project Flow
 
-![Project Diagram](architecture.png)
+![Project Diagram](./Architecture.png)
 
 ---
 
